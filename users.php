@@ -2,13 +2,19 @@
 session_start();
 include 'includes/db.php';
 
+// Check if the user is logged in (Blocks unauthorized users)
 if(!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true){
     header("location: index.php");
     exit;
 }
 
-// show users
+// Check if the user has the admin role (Blocks authorized non-admin users)
+if(!isset($_SESSION['role']) || $_SESSION['role'] !== 'beheerder'){
+    header("location: index.php");
+    exit;
+}
 
+// Fetch users from the database only if access is granted
 $stmt = $pdo->prepare("SELECT * FROM user");
 $stmt->execute();
 $users = $stmt->fetchAll();
@@ -43,8 +49,11 @@ $users = $stmt->fetchAll();
                <td class="border-b p-2"><a href="transacties.php?id=<?= $user['id'] ?>"><?= $user['username'] ?></a></td>
                 <td class="border-b p-2">€<?= number_format($user['balance'], 2, ',', '.') ?></td>
             </tr>
+        
         <?php endforeach; ?>
         </tbody>
+    </table>
 </div>
 </body>
+</html>
 
