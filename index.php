@@ -7,30 +7,35 @@ include 'includes/userTable.php';
 include 'includes/transactionTable.php';
 
 //Controleer of post is geset
-if($_SERVER["REQUEST_METHOD"] == "POST") {
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Gebruikersnaam en wachtwoord uit post halen
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    // kwetsbaar voor SQL injectie
-    $sql = "SELECT * FROM user WHERE username = '$username' AND password = '$password'";
-    $result = $pdo->query($sql);
-    $user = $result->fetch();
+    // FIX: Prepared statement against SQL Injection
+    $stmt = $pdo->prepare("SELECT * FROM user WHERE username = ?");
+    $stmt->execute([$username]);
+    $user = $stmt->fetch();
 
-    // Controleer of er een rij is gevonden
-    if($result->rowCount() > 0) {
+    // Emulate the SQL string for the debug box at the bottom
+    $sql = "SELECT * FROM user WHERE username = '" . htmlspecialchars($username) . "'";
+
+    // FIX: Secure password validation using password_verify()
+    if ($user && password_verify($password, $user['password'])) {
         // Gebruiker is ingelogd
         $_SESSION['loggedin'] = true;
-        $_SESSION['username'] = $username;
-        $_SESSION['user'] = $user;
+        $_SESSION['username'] = $user['username'];
+        $_SESSION['id'] = $user['id']; // Needed for your transactions page security
+        $_SESSION['role'] = $user['isAdmin'] == 1 ? 'beheerder' : 'klant'; // Hardened role assignment
 
         header("location: dashboard.php");
+        exit;
     } else {
         // Gebruiker is niet ingelogd
         $error = "Gebruikersnaam of wachtwoord is onjuist";
     }
-
 }
+
 
 ?>
 
