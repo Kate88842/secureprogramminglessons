@@ -2,24 +2,37 @@
 session_start();
 include 'includes/db.php';
 
+// Check if the user is logged in at all
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     header("location: index.php");
     exit;
 }
 
-$id = $_GET['id'];
+// Get the requested user ID from the URL securely
+$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// Gebruikersgegevens ophalen
+// IDOR FIX: If the user is NOT an admin (beheerder), they can ONLY view their own ID
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'beheerder') {
+    // Check if your project uses $_SESSION['id'] for the logged-in user's ID
+    $current_user_id = isset($_SESSION['id']) ? intval($_SESSION['id']) : 0;
+    
+    if ($id !== $current_user_id) {
+        header("location: index.php");
+        exit;
+    }
+}
+
+// Gebruikersgegevens ophalen (Fetch user details if access is granted)
 $stmt = $pdo->prepare("SELECT * FROM user WHERE id = ?");
 $stmt->execute([$id]);
 $user = $stmt->fetch();
 
-// Uitgaande transacties ophalen
+// Uitgaande transacties ophalen (Fetch outgoing transactions)
 $stmt = $pdo->prepare("SELECT * FROM transaction WHERE sender = ?");
 $stmt->execute([$id]);
 $outgoingTransactions = $stmt->fetchAll();
 
-// Inkomende transacties ophalen
+// Inkomende transacties ophalen (Fetch incoming transactions)
 $stmt = $pdo->prepare("SELECT * FROM transaction WHERE receiver = ?");
 $stmt->execute([$id]);
 $incomingTransactions = $stmt->fetchAll();
